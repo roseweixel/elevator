@@ -35,12 +35,26 @@ describe ElevatorBank do
     let!(:near_elevator) { Elevator.new(bank, 2) }
     let!(:far_elevator) { Elevator.new(bank) }
 
-    # it "should add an elevator request to the queue" do
-    #   expect{bank.summon(1)}.to change{bank.queue.count}.from(0).to(1)
-    # end
-
     it "should add an elevator request to the queue" do
-      expect{bank.summon(5)}.to change{near_elevator.floor}.from(2).to(5)
+      expect{bank.summon(1)}.to change{bank.pickup_queue.count}.from(0).to(1)
+    end
+  end
+
+  describe "#send_to_pickup" do
+    let(:bank) { ElevatorBank.new(7) }
+    let!(:near_elevator) { Elevator.new(bank, 2) }
+    let!(:far_elevator) { Elevator.new(bank) }
+
+    before(:each) do
+      bank.summon(5)
+    end
+
+    it "should remove the first request from the pickup_queue" do
+      expect{bank.send_to_pickup}.to change{bank.pickup_queue.count}.from(1).to(0)
+    end
+
+    it "send the nearest elevator to the requested floor" do
+      expect{bank.send_to_pickup}.to change{near_elevator.floor}.from(2).to(5)
     end
   end
 
@@ -60,19 +74,38 @@ describe Elevator do
   let(:bank) { ElevatorBank.new(7) }
   let(:elevator) { Elevator.new(bank) }
 
-  # describe ".new" do
-  #   it "should create an instance of Elevator" do
-  #     expect{
-  #       elevator = Elevator.new(bank)
-  #       }.to_not raise_error
-  #   end
-  # end
-
   describe "#go_to" do
     it "should change the floor to the one it was sent to" do
       expect{
         elevator.go_to(5)
       }.to change{elevator.floor}.from(1).to(5)
+    end
+  end
+
+  describe "#take_me_to" do
+    it "should add a request to be dropped off to the dropoff_queue" do
+
+      expect{
+        elevator.take_me_to(5)
+      }.to change{elevator.dropoff_queue.count}.from(0).to(1)
+
+      expect(elevator.dropoff_queue).to include(5)
+    end
+  end
+
+  describe "#send_to_dropoff" do
+    it "should send the elevator to the nearest dropoff request in its dropoff_queue and delete the request" do
+      elevator.take_me_to(3)
+      elevator.take_me_to(4)
+
+      expect(elevator.dropoff_queue.size).to eq(2)
+
+      expect{ 
+        elevator.send_to_dropoff
+        }.to change{elevator.floor}.from(1).to(3)
+
+      expect(elevator.dropoff_queue.size).to eq(1)
+      
     end
   end
 
